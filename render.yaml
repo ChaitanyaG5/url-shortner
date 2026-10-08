@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: url-shortner
+    env: java
+    javaVersion: 17
+    plan: standard
+    buildCommand: mvn clean install -DskipTests
+    startCommand: java -jar target/url-shortner-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: url-shortner-db
+          property: connectionStringPool
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: url-shortner-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: url-shortner-db
+          property: password
+      - key: SPRING_REDIS_HOST
+        fromService:
+          name: url-shortner-redis
+          property: host
+      - key: SPRING_REDIS_PORT
+        fromService:
+          name: url-shortner-redis
+          property: port
+      - key: SPRING_RABBITMQ_HOST
+        fromService:
+          name: url-shortner-rabbitmq
+          property: host
+      - key: SPRING_RABBITMQ_PORT
+        fromService:
+          name: url-shortner-rabbitmq
+          property: port
+
+  - type: pserv
+    name: url-shortner-db
+    image:
+      fromRegistry:
+        url: docker.io/library/mysql:8.0
+    plan: standard
+    envVars:
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true
+      - key: MYSQL_DATABASE
+        value: url_shortner
+
+  - type: pserv
+    name: url-shortner-redis
+    image:
+      fromRegistry:
+        url: docker.io/library/redis:7-alpine
+    plan: standard
+
+  - type: pserv
+    name: url-shortner-rabbitmq
+    image:
+      fromRegistry:
+        url: docker.io/library/rabbitmq:3.12-management-alpine
+    plan: standard
+    envVars:
+      - key: RABBITMQ_DEFAULT_USER
+        value: guest
+      - key: RABBITMQ_DEFAULT_PASS
+        value: guest
