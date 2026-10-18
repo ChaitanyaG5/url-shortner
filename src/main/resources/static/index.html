@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>URL Shortener — Quick UI</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 2rem; max-width: 680px; margin: auto; }
+    label, input, button { display:block; width:100%; }
+    input { padding: .5rem; font-size: 1rem; margin-top:.25rem; }
+    button { margin-top:.5rem; padding:.6rem; font-size:1rem; }
+    .result { margin-top: 1rem; padding: .75rem; border: 1px solid #eee; background:#fafafa; }
+    .muted { color:#666; font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <h1>URL Shortener — Quick UI</h1>
+
+  <form id="shortenForm">
+    <label for="url">Original URL</label>
+    <input id="url" name="url" type="url" placeholder="https://example.com/very/long/path" required />
+    <button type="submit">Get shortened id</button>
+  </form>
+
+  <div id="status" class="muted" aria-live="polite"></div>
+
+  <div id="result" class="result" style="display:none;">
+    <div><strong>Short id:</strong> <span id="shortId"></span></div>
+    <div style="margin-top:.5rem;">
+      <button id="copyBtn">Copy id</button>
+      <button id="openApiBtn" style="margin-left:.5rem">Open API GET (/rest/url/{id})</button>
+    </div>
+    <div style="margin-top:.5rem;" class="muted">
+      Note: This UI posts the URL as plain text to POST /rest/url and displays the returned id.
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('shortenForm');
+    const urlInput = document.getElementById('url');
+    const status = document.getElementById('status');
+    const result = document.getElementById('result');
+    const shortIdEl = document.getElementById('shortId');
+    const copyBtn = document.getElementById('copyBtn');
+    const openApiBtn = document.getElementById('openApiBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      result.style.display = 'none';
+      status.textContent = 'Sending...';
+      const url = urlInput.value.trim();
+      if (!url) { status.textContent = 'Enter a URL.'; return; }
+
+      try {
+        const resp = await fetch('/rest/url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          body: url
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error(text || resp.statusText);
+        }
+
+        const id = await resp.text();
+        shortIdEl.textContent = id;
+        result.style.display = '';
+        status.textContent = 'Short id received.';
+
+      } catch (err) {
+        status.textContent = 'Error: ' + (err.message || err);
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const id = shortIdEl.textContent;
+      if (!id) return;
+      navigator.clipboard?.writeText(id).then(() => {
+        status.textContent = 'Copied to clipboard.';
+      }).catch(() => {
+        status.textContent = 'Could not copy automatically — select and copy manually.';
+      });
+    });
+
+    openApiBtn.addEventListener('click', () => {
+      const id = shortIdEl.textContent;
+      if (!id) return;
+      window.open(window.location.origin + '/rest/url/' + encodeURIComponent(id), '_blank');
+    });
+  </script>
+</body>
+</html>
